@@ -29,8 +29,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.concurrent.Executors;
 
-@SuppressWarnings("serial")
 public class DialogAddDownload extends JDialog {
     private DatenPset pSet;
     private boolean ok;
@@ -51,7 +51,6 @@ public class DialogAddDownload extends JDialog {
         super(parent, true);
         initComponents();
 
-        filmBorder = (TitledBorder) jPanelSize.getBorder();
         cbPathTextComponent = ((JTextComponent) jComboBoxPfad.getEditor().getEditorComponent());
 
         this.aufloesung = aufloesung;
@@ -72,6 +71,21 @@ public class DialogAddDownload extends JDialog {
     }
 
     private void init() {
+        // launch async tasks first
+        var pool = Executors.newWorkStealingPool();
+        var hdFuture = pool.submit(() -> {
+            var url = datenFilm.getUrlFuerAufloesung(FilmResolution.Enum.HIGH_QUALITY);
+            return datenFilm.getDateigroesse(url);
+        });
+        var hochFuture = pool.submit(() -> {
+            var url = datenFilm.getUrl();
+            return datenFilm.getDateigroesse(url);
+        });
+        var kleinFuture = pool.submit(() -> {
+            var url = datenFilm.getUrlFuerAufloesung(FilmResolution.Enum.LOW);
+            return datenFilm.getDateigroesse(url);
+        });
+
         jButtonDelHistory.setIcon(Icons.ICON_BUTTON_DEL);
         jComboBoxPset.setModel(new DefaultComboBoxModel<>(Daten.listePset.getListeSpeichern().getObjectDataCombo()));
 
@@ -210,22 +224,43 @@ public class DialogAddDownload extends JDialog {
         jRadioButtonAufloesungHoch.addActionListener(listener);
         jRadioButtonAufloesungHoch.setSelected(true);
 
+        try {
+            dateiGroesse_Hoch = hochFuture.get();
+        } catch (Exception e) {
+            dateiGroesse_Hoch = "";
+            logger.error("Failed to retrieve Hoch resolution", e);
+        }
+        if (!dateiGroesse_Hoch.isEmpty()) {
+            jRadioButtonAufloesungHoch.setText(jRadioButtonAufloesungHoch.getText() + "   [ " + dateiGroesse_Hoch + " MB ]");
+        }
+
         if (jRadioButtonAufloesungHd.isEnabled()) {
-            dateiGroesse_HD = datenFilm.getDateigroesse(datenFilm.getUrlFuerAufloesung(FilmResolution.Enum.HIGH_QUALITY));
+            try {
+                dateiGroesse_HD = hdFuture.get();
+            } catch (Exception e) {
+                dateiGroesse_HD = "";
+                logger.error("Failed to retrieve HD resolution", e);
+            }
             if (!dateiGroesse_HD.isEmpty()) {
                 jRadioButtonAufloesungHd.setText(jRadioButtonAufloesungHd.getText() + "   [ " + dateiGroesse_HD + " MB ]");
             }
         }
-        dateiGroesse_Hoch = datenFilm.getDateigroesse(datenFilm.getUrl());
-        if (!dateiGroesse_Hoch.isEmpty()) {
-            jRadioButtonAufloesungHoch.setText(jRadioButtonAufloesungHoch.getText() + "   [ " + dateiGroesse_Hoch + " MB ]");
-        }
+
         if (jRadioButtonAufloesungKlein.isEnabled()) {
-            dateiGroesse_Klein = datenFilm.getDateigroesse(datenFilm.getUrlFuerAufloesung(FilmResolution.Enum.LOW));
+            try {
+                dateiGroesse_Klein = kleinFuture.get();
+            } catch (Exception e) {
+                dateiGroesse_Klein = "";
+                logger.error("Failed to retrieve Klein resolution", e);
+            }
             if (!dateiGroesse_Klein.isEmpty()) {
                 jRadioButtonAufloesungKlein.setText(jRadioButtonAufloesungKlein.getText() + "   [ " + dateiGroesse_Klein + " MB ]");
             }
         }
+
+        //not needed anymore
+        pool.shutdown();
+
         jButtonDelHistory.addActionListener(e -> {
             MVConfig.add(MVConfig.Configs.SYSTEM_DIALOG_DOWNLOAD__PFADE_ZUM_SPEICHERN, "");
             jComboBoxPfad.setModel(new DefaultComboBoxModel<>(new String[]{orgPfad}));
@@ -295,7 +330,6 @@ public class DialogAddDownload extends JDialog {
         return usableSpace;
     }
 
-    private final TitledBorder filmBorder;
     private static final String TITLED_BORDER_STRING = "Download-Qualität";
 
     /**
@@ -307,6 +341,7 @@ public class DialogAddDownload extends JDialog {
         jRadioButtonAufloesungKlein.setForeground(Color.black);
 
         try {
+            var filmBorder = (TitledBorder)jPanelSize.getBorder();
             long usableSpace = getFreeDiskSpace(cbPathTextComponent.getText());
             if (usableSpace > 0) {
                 filmBorder.setTitle(TITLED_BORDER_STRING + " [ Freier Speicherplatz: " + FileUtils.byteCountToDisplaySize(usableSpace) + " ]");
