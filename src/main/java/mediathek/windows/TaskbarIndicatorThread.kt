@@ -1,58 +1,51 @@
-package mediathek.windows;
+package mediathek.windows
 
-import com.sun.jna.platform.win32.Kernel32;
-import com.sun.jna.platform.win32.WinBase;
-import mediathek.tool.threads.IndicatorThread;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.sun.jna.platform.win32.Kernel32
+import com.sun.jna.platform.win32.WinBase
+import mediathek.tool.threads.IndicatorThread
+import org.apache.logging.log4j.LogManager
+import java.awt.Taskbar
+import java.util.concurrent.TimeUnit
+import javax.swing.JFrame
 
-import javax.swing.*;
-import java.awt.*;
-import java.util.concurrent.TimeUnit;
+internal class TaskbarIndicatorThread(parent: MediathekGuiWindows) : IndicatorThread() {
+    private val taskbar: Taskbar
+    private val parent: JFrame
 
-public class TaskbarIndicatorThread extends IndicatorThread {
-    private final Taskbar taskbar;
-    private final JFrame parent;
-    private static final Logger logger = LogManager.getLogger(TaskbarIndicatorThread.class);
-
-
-    public TaskbarIndicatorThread(MediathekGuiWindows parent) {
-        super();
-        setName("TaskbarIndicatorThread");
-        taskbar = Taskbar.getTaskbar();
-        this.parent = parent;
-
+    private fun disableStandby() {
+        if (Kernel32.INSTANCE.SetThreadExecutionState(WinBase.ES_CONTINUOUS or WinBase.ES_SYSTEM_REQUIRED) == 0)
+            logger.error("disableStandby() failed!")
     }
 
-    private void disableStandby() {
-        int success = Kernel32.INSTANCE.SetThreadExecutionState(WinBase.ES_CONTINUOUS | WinBase.ES_SYSTEM_REQUIRED);
-        if (success == 0)
-            logger.error("disableStandby() failed!");
+    private fun enableStandby() {
+        if (Kernel32.INSTANCE.SetThreadExecutionState(WinBase.ES_CONTINUOUS) == 0)
+            logger.error("enableStandby() failed!")
     }
 
-    private void enableStandby() {
-        int success = Kernel32.INSTANCE.SetThreadExecutionState(WinBase.ES_CONTINUOUS);
-        if (success == 0)
-            logger.error("enableStandby() failed!");
-    }
-
-    @Override
-    public void run() {
+    override fun run() {
         try {
-            while (!isInterrupted()) {
-                final int percentage = (int) calculateOverallPercentage();
-                taskbar.setWindowProgressValue(parent,percentage);
-                taskbar.setWindowProgressState(parent,Taskbar.State.NORMAL);
-
-                disableStandby();
-
-                TimeUnit.MILLISECONDS.sleep(500);
+            while (!isInterrupted) {
+                val percentage = calculateOverallPercentage().toInt()
+                taskbar.setWindowProgressValue(parent, percentage)
+                taskbar.setWindowProgressState(parent, Taskbar.State.NORMAL)
+                disableStandby()
+                TimeUnit.MILLISECONDS.sleep(500)
             }
-        } catch (InterruptedException ignored) {
+        } catch (ignored: InterruptedException) {
         } finally {
             //when we are finished, stop progress
-            taskbar.setWindowProgressState(parent, Taskbar.State.OFF);
-            enableStandby();
+            taskbar.setWindowProgressState(parent, Taskbar.State.OFF)
+            enableStandby()
         }
+    }
+
+    companion object {
+        private val logger = LogManager.getLogger()
+    }
+
+    init {
+        name = "TaskbarIndicatorThread"
+        taskbar = Taskbar.getTaskbar()
+        this.parent = parent
     }
 }
