@@ -33,7 +33,6 @@ import java.util.concurrent.Executors;
 
 public class DialogAddDownload extends JDialog {
     private DatenPset pSet;
-    private boolean ok;
     private DatenDownload datenDownload;
     private final DatenFilm datenFilm;
     private String orgPfad = "";
@@ -95,8 +94,7 @@ public class DialogAddDownload extends JDialog {
         jButtonZiel.setText("");
         if (Daten.listePset.getListeSpeichern().isEmpty()) {
             // Satz mit x, war wohl nix
-            ok = false;
-            beenden();
+            beenden(false);
         }
 
         jButtonZiel.addActionListener(l -> {
@@ -115,20 +113,14 @@ public class DialogAddDownload extends JDialog {
 
         jButtonOk.addActionListener(e -> {
             if (check()) {
-                beenden();
+                beenden(true);
             }
         });
         getRootPane().setDefaultButton(jButtonOk);
 
-        EscapeKeyHandler.installHandler(this, () -> {
-            ok = false;
-            beenden();
-        });
+        EscapeKeyHandler.installHandler(this, () -> beenden(false));
 
-        jButtonAbbrechen.addActionListener(e -> {
-            ok = false;
-            beenden();
-        });
+        jButtonAbbrechen.addActionListener(e -> beenden(false));
 
         if (pSet != null) {
             jComboBoxPset.setSelectedItem(pSet.arr[DatenPset.PROGRAMMSET_NAME]);
@@ -480,7 +472,7 @@ public class DialogAddDownload extends JDialog {
     }
 
     private boolean check() {
-        ok = false;
+        var ok = false;
         String pfad = Objects.requireNonNull(jComboBoxPfad.getSelectedItem()).toString();
         String name = jTextFieldName.getText();
         if (datenDownload != null) {
@@ -500,7 +492,7 @@ public class DialogAddDownload extends JDialog {
         return ok;
     }
 
-    private void beenden() {
+    private void beenden(boolean ok) {
         if (ok) {
             // jetzt wird mit den angegebenen Pfaden gearbeitet
             datenDownload = new DatenDownload(pSet, datenFilm, DatenDownload.QUELLE_DOWNLOAD, null, jTextFieldName.getText(), Objects.requireNonNull(jComboBoxPfad.getSelectedItem()).toString(), getFilmResolution());
