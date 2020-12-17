@@ -43,7 +43,6 @@ public class DialogAddDownload extends JDialog {
     private boolean nameGeaendert;
     private boolean stopBeob;
     private final JTextComponent cbPathTextComponent;
-    private final Configuration config = ApplicationConfiguration.getConfiguration();
     private static final Logger logger = LogManager.getLogger();
 
     public DialogAddDownload(Frame parent, DatenFilm film, DatenPset pSet, String aufloesung) {
@@ -258,6 +257,7 @@ public class DialogAddDownload extends JDialog {
             jComboBoxPfad.setModel(new DefaultComboBoxModel<>(new String[]{orgPfad}));
         });
 
+        final Configuration config = ApplicationConfiguration.getConfiguration();
         jCheckBoxPfadSpeichern.setSelected(config.getBoolean(ApplicationConfiguration.DOWNLOAD_SHOW_LAST_USED_PATH, true));
         jCheckBoxPfadSpeichern.addActionListener(e -> config.setProperty(ApplicationConfiguration.DOWNLOAD_SHOW_LAST_USED_PATH, jCheckBoxPfadSpeichern.isSelected()));
 
@@ -422,16 +422,25 @@ public class DialogAddDownload extends JDialog {
         MVConfig.add(MVConfig.Configs.SYSTEM_DIALOG_DOWNLOAD__PFADE_ZUM_SPEICHERN, s);
     }
 
+    private boolean isHighQualityCapable() {
+        return pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.HIGH_QUALITY)
+                && !datenFilm.getUrlHighQuality().isEmpty();
+    }
+
+    private boolean isLowQualityCapable() {
+        return pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.LOW) &&
+                !datenFilm.getUrlKlein().isEmpty();
+    }
+
     /**
      * Setup the resolution radio buttons based on available download URLs.
      */
     private void setupResolutionButtons() {
         pSet = Daten.listePset.getListeSpeichern().get(jComboBoxPset.getSelectedIndex());
-        if (aufloesung.equals(FilmResolution.HIGH_QUALITY) || pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.HIGH_QUALITY)
-                && !datenFilm.getUrlHighQuality().isEmpty()) {
+        if (aufloesung.equals(FilmResolution.HIGH_QUALITY) || isHighQualityCapable()) {
             /* Dann wurde im Filter HD ausgewählt und wird voreingestellt */
             jRadioButtonAufloesungHd.setSelected(true);
-        } else if (pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.LOW) && !datenFilm.getUrlKlein().isEmpty()) {
+        } else if (isLowQualityCapable()) {
             jRadioButtonAufloesungKlein.setSelected(true);
         } else {
             jRadioButtonAufloesungHoch.setSelected(true);
