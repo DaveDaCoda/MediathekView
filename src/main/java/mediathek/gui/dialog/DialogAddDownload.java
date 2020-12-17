@@ -13,6 +13,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -36,7 +38,7 @@ public class DialogAddDownload extends JDialog {
     private DatenDownload datenDownload;
     private final DatenFilm datenFilm;
     private String orgPfad = "";
-    private final String aufloesung;
+    private final String requestedResolution;
     private String dateiGroesse_HD = "";
     private String dateiGroesse_Hoch = "";
     private String dateiGroesse_Klein = "";
@@ -45,21 +47,20 @@ public class DialogAddDownload extends JDialog {
     private final JTextComponent cbPathTextComponent;
     private static final Logger logger = LogManager.getLogger();
 
-    public DialogAddDownload(Frame parent, DatenFilm film, DatenPset pSet, String aufloesung) {
+    public DialogAddDownload(@NotNull Frame parent, @NotNull DatenFilm film, @Nullable DatenPset pSet, @NotNull String requestedResolution) {
         super(parent, true);
         initComponents();
 
         cbPathTextComponent = ((JTextComponent) jComboBoxPfad.getEditor().getEditorComponent());
 
-        this.aufloesung = aufloesung;
+        this.requestedResolution = requestedResolution;
         datenFilm = film;
         this.pSet = pSet;
 
         init();
         packIt();
-        if (parent != null) {
-            setLocationRelativeTo(parent);
-        }
+
+        setLocationRelativeTo(parent);
     }
 
     private void packIt() {
@@ -271,7 +272,7 @@ public class DialogAddDownload extends JDialog {
         if (!nameGeaendert) {
             // nur wenn vom Benutzer noch nicht geänert!
             stopBeob = true;
-            datenDownload = new DatenDownload(pSet, datenFilm, DatenDownload.QUELLE_DOWNLOAD, null, "", "", getFilmResolution());
+            datenDownload = new DatenDownload(pSet, datenFilm, DatenDownload.QUELLE_DOWNLOAD, null, "", "", getFilmResolution().toString());
             if (datenDownload.arr[DatenDownload.DOWNLOAD_ZIEL_DATEINAME].isEmpty()) {
                 // dann wird nicht gespeichert ==> eigenntlich falsche Seteinstellungen??
                 jTextFieldName.setEnabled(false);
@@ -422,13 +423,13 @@ public class DialogAddDownload extends JDialog {
         MVConfig.add(MVConfig.Configs.SYSTEM_DIALOG_DOWNLOAD__PFADE_ZUM_SPEICHERN, s);
     }
 
-    private boolean isHighQualityCapable() {
-        return pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.HIGH_QUALITY)
+    private boolean isHighQualityRequested() {
+        return pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.Enum.HIGH_QUALITY.toString())
                 && !datenFilm.getUrlHighQuality().isEmpty();
     }
 
-    private boolean isLowQualityCapable() {
-        return pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.LOW) &&
+    private boolean isLowQualityRequested() {
+        return pSet.arr[DatenPset.PROGRAMMSET_AUFLOESUNG].equals(FilmResolution.Enum.LOW.toString()) &&
                 !datenFilm.getUrlKlein().isEmpty();
     }
 
@@ -437,15 +438,17 @@ public class DialogAddDownload extends JDialog {
      */
     private void setupResolutionButtons() {
         pSet = Daten.listePset.getListeSpeichern().get(jComboBoxPset.getSelectedIndex());
-        if (aufloesung.equals(FilmResolution.HIGH_QUALITY) || isHighQualityCapable()) {
+        if (requestedResolution.equals(FilmResolution.Enum.HIGH_QUALITY.toString()) || isHighQualityRequested()) {
             /* Dann wurde im Filter HD ausgewählt und wird voreingestellt */
             jRadioButtonAufloesungHd.setSelected(true);
-        } else if (isLowQualityCapable()) {
+        } else if (isLowQualityRequested()) {
             jRadioButtonAufloesungKlein.setSelected(true);
         } else {
             jRadioButtonAufloesungHoch.setSelected(true);
         }
+
         jCheckBoxInfodatei.setSelected(Boolean.parseBoolean(pSet.arr[DatenPset.PROGRAMMSET_INFODATEI]));
+
         if (datenFilm.getUrlSubtitle().isEmpty()) {
             // dann gibts keinen Subtitle
             jCheckBoxSubtitle.setEnabled(false);
@@ -460,13 +463,13 @@ public class DialogAddDownload extends JDialog {
      *
      * @return The resolution as a string.
      */
-    private String getFilmResolution() {
+    private FilmResolution.Enum getFilmResolution() {
         if (jRadioButtonAufloesungHd.isSelected()) {
-            return FilmResolution.HIGH_QUALITY;
+            return FilmResolution.Enum.HIGH_QUALITY;
         } else if (jRadioButtonAufloesungKlein.isSelected()) {
-            return FilmResolution.LOW;
+            return FilmResolution.Enum.LOW;
         } else {
-            return FilmResolution.NORMAL;
+            return FilmResolution.Enum.NORMAL;
         }
     }
 
@@ -504,7 +507,7 @@ public class DialogAddDownload extends JDialog {
     private void beenden(boolean ok) {
         if (ok) {
             // jetzt wird mit den angegebenen Pfaden gearbeitet
-            datenDownload = new DatenDownload(pSet, datenFilm, DatenDownload.QUELLE_DOWNLOAD, null, jTextFieldName.getText(), Objects.requireNonNull(jComboBoxPfad.getSelectedItem()).toString(), getFilmResolution());
+            datenDownload = new DatenDownload(pSet, datenFilm, DatenDownload.QUELLE_DOWNLOAD, null, jTextFieldName.getText(), Objects.requireNonNull(jComboBoxPfad.getSelectedItem()).toString(), getFilmResolution().toString());
             datenDownload.setGroesse(getFilmSize());
             datenDownload.arr[DatenDownload.DOWNLOAD_INFODATEI] = Boolean.toString(jCheckBoxInfodatei.isSelected());
             datenDownload.arr[DatenDownload.DOWNLOAD_SUBTITLE] = Boolean.toString(jCheckBoxSubtitle.isSelected());
