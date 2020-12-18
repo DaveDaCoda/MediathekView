@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 
 public class DialogAddDownload extends JDialog {
@@ -38,7 +39,7 @@ public class DialogAddDownload extends JDialog {
     private DatenDownload datenDownload;
     private final DatenFilm datenFilm;
     private String orgPfad = "";
-    private final String requestedResolution;
+    private final Optional<FilmResolution.Enum> requestedResolution;
     private String dateiGroesse_HD = "";
     private String dateiGroesse_Hoch = "";
     private String dateiGroesse_Klein = "";
@@ -47,7 +48,7 @@ public class DialogAddDownload extends JDialog {
     private final JTextComponent cbPathTextComponent;
     private static final Logger logger = LogManager.getLogger();
 
-    public DialogAddDownload(@NotNull Frame parent, @NotNull DatenFilm film, @Nullable DatenPset pSet, @NotNull String requestedResolution) {
+    public DialogAddDownload(@NotNull Frame parent, @NotNull DatenFilm film, @Nullable DatenPset pSet, @NotNull Optional<FilmResolution.Enum> requestedResolution) {
         super(parent, true);
         initComponents();
 
@@ -433,13 +434,14 @@ public class DialogAddDownload extends JDialog {
                 !datenFilm.getUrlKlein().isEmpty();
     }
 
+    private boolean highQualityMandated;
     /**
      * Setup the resolution radio buttons based on available download URLs.
      */
     private void setupResolutionButtons() {
         pSet = Daten.listePset.getListeSpeichern().get(jComboBoxPset.getSelectedIndex());
-        if (requestedResolution.equals(FilmResolution.Enum.HIGH_QUALITY.toString()) || isHighQualityRequested()) {
-            /* Dann wurde im Filter HD ausgewählt und wird voreingestellt */
+        requestedResolution.ifPresent(it -> highQualityMandated = it == FilmResolution.Enum.HIGH_QUALITY);
+        if (highQualityMandated || isHighQualityRequested()) {
             jRadioButtonAufloesungHd.setSelected(true);
         } else if (isLowQualityRequested()) {
             jRadioButtonAufloesungKlein.setSelected(true);

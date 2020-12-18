@@ -29,6 +29,7 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @SuppressWarnings("serial")
 public abstract class PanelErledigteUrls extends JPanel {
@@ -166,7 +167,7 @@ public abstract class PanelErledigteUrls extends JPanel {
                     }
                 }
                 // weiter
-                DialogAddDownload dialog = new DialogAddDownload(MediathekGui.ui(), film, null, "");
+                DialogAddDownload dialog = new DialogAddDownload(MediathekGui.ui(), film, null, Optional.empty());
                 dialog.setVisible(true);
             }
 
