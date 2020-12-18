@@ -1,6 +1,7 @@
-package mediathek.tool;
+package mediathek.tool.http;
 
 import mediathek.config.Config;
+import mediathek.tool.ApplicationConfiguration;
 import mediathek.tool.dns.DnsSelector;
 import mediathek.tool.dns.IPvPreferenceMode;
 import okhttp3.Authenticator;
