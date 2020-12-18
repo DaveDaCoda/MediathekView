@@ -22,6 +22,7 @@ public class MVHttpClient {
     private static final String HTTP_PROXY_AUTHORIZATION = "Proxy-Authorization";
     private final Logger logger = LogManager.getLogger(MVHttpClient.class);
     private final Configuration config = ApplicationConfiguration.getConfiguration();
+    private final ByteCounter byteCounter = new ByteCounter();
     private OkHttpClient httpClient;
     private OkHttpClient copyClient;
 
@@ -90,8 +91,13 @@ public class MVHttpClient {
         builder.connectTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
+                .socketFactory(byteCounter.socketFactory())
                 .dns(new DnsSelector(mode));
         return builder;
+    }
+
+    public ByteCounter getByteCounter() {
+        return byteCounter;
     }
 
     private Authenticator createAuthenticator(String prxUser, String prxPassword) {
